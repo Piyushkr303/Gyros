@@ -1,0 +1,9 @@
+tools:
+  ruff:
+    enabled: true
+    binary: ruff
+  semgrep:
+    enabled: true
+    binary: semgrep
+  pytest:
+    enabled: false  # gated by ENABLE_TEST_EXECUTION env var regardless of this flag

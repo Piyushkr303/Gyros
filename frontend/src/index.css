@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-mission-bg text-slate-200 antialiased;
+    background-image: radial-gradient(circle at 20% 0%, rgba(94, 234, 212, 0.06), transparent 40%),
+      radial-gradient(circle at 80% 10%, rgba(129, 140, 248, 0.07), transparent 45%);
+    background-attachment: fixed;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1c2333;
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-xl border border-mission-border bg-mission-panel/70 backdrop-blur-sm;
+  }
+
+  .mono-label {
+    @apply font-display text-[11px] uppercase tracking-widest text-mission-muted;
+  }
+}
+
+.explorer-target-line {
+  background: rgba(94, 234, 212, 0.15);
+}

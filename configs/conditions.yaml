@@ -1,0 +1,6 @@
+# Named threshold constants referenced by graph.yaml / agent logic.
+# (graph.yaml inlines actual edge conditions; this file holds shared constants only.)
+thresholds:
+  high_severity_confidence_min: 0.7
+  reanalysis_max_retries: 1
+  critic_max_retries: 1

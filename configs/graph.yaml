@@ -1,0 +1,346 @@
+# Defines the conditional agent graph for the Core MVP slice.
+# condition strings are evaluated by backend.core.conditions.safe_evaluator
+# (a restricted AST interpreter - Python boolean syntax, no function calls).
+
+nodes:
+  - id: orchestrator
+    label: Orchestrator
+    kind: orchestration
+  - id: impact_analyzer
+    label: Impact Analyzer
+    kind: agent
+  - id: security_agent
+    label: Security Agent
+    kind: agent
+  - id: bug_detection_agent
+    label: Bug Detection Agent
+    kind: agent
+  - id: test_agent
+    label: Test Agent
+    kind: agent
+  - id: performance_agent
+    label: Performance Agent
+    kind: agent
+  - id: documentation_agent
+    label: Documentation Agent
+    kind: agent
+  - id: dependency_agent
+    label: Dependency Agent
+    kind: agent
+  - id: reliability_agent
+    label: Reliability Agent
+    kind: agent
+  - id: api_contract_agent
+    label: API Contract Agent
+    kind: agent
+  - id: database_agent
+    label: Database Agent
+    kind: agent
+  - id: observability_agent
+    label: Observability Agent
+    kind: agent
+  - id: architecture_agent
+    label: Architecture Agent
+    kind: agent
+  - id: code_impact_agent
+    label: Code Impact Agent
+    kind: agent
+  - id: static_analysis_agent
+    label: Static Analysis Agent
+    kind: agent
+  - id: accessibility_agent
+    label: Accessibility Agent
+    kind: agent
+  - id: ci_investigator_agent
+    label: CI Investigator (dynamic)
+    kind: agent
+  - id: requirement_agent
+    label: Requirement Agent
+    kind: agent
+  - id: validator_agent
+    label: Validator
+    kind: agent
+  - id: critic_agent
+    label: Critic
+    kind: agent
+  - id: conflict_resolver_agent
+    label: Conflict Resolver
+    kind: agent
+  - id: debate_agent
+    label: Debate Agent
+    kind: agent
+  - id: final_review_agent
+    label: Final Review
+    kind: agent
+  - id: human_approval
+    label: Human Approval
+    kind: orchestration
+  - id: github_publish
+    label: GitHub Publish
+    kind: orchestration
+  - id: review_closed
+    label: Review Closed
+    kind: orchestration
+
+edges:
+  - source: orchestrator
+    target: impact_analyzer
+    type: ALWAYS
+    condition: "True"
+    priority: 0
+
+  - source: impact_analyzer
+    target: security_agent
+    type: IF
+    condition: "security_sensitive == True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: bug_detection_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: test_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: performance_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: documentation_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: dependency_agent
+    type: IF
+    condition: "dependency_changed == True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: reliability_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: api_contract_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: database_agent
+    type: IF
+    condition: "database_changed == True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: observability_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: architecture_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: code_impact_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: static_analysis_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: accessibility_agent
+    type: IF
+    condition: "frontend_changed == True"
+    priority: 1
+
+  - source: impact_analyzer
+    target: requirement_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 1
+
+  - source: security_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "security_agent.findings_count > 0"
+    priority: 2
+
+  - source: bug_detection_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "bug_detection_agent.findings_count > 0"
+    priority: 2
+
+  - source: test_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "test_agent.findings_count > 0"
+    priority: 2
+
+  - source: performance_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "performance_agent.findings_count > 0"
+    priority: 2
+
+  - source: documentation_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "documentation_agent.findings_count > 0"
+    priority: 2
+
+  - source: dependency_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "dependency_agent.findings_count > 0"
+    priority: 2
+
+  - source: reliability_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "reliability_agent.findings_count > 0"
+    priority: 2
+
+  - source: api_contract_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "api_contract_agent.findings_count > 0"
+    priority: 2
+
+  - source: database_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "database_agent.findings_count > 0"
+    priority: 2
+
+  - source: observability_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "observability_agent.findings_count > 0"
+    priority: 2
+
+  - source: architecture_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "architecture_agent.findings_count > 0"
+    priority: 2
+
+  - source: code_impact_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "code_impact_agent.findings_count > 0"
+    priority: 2
+
+  - source: static_analysis_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "static_analysis_agent.findings_count > 0"
+    priority: 2
+
+  - source: accessibility_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "accessibility_agent.findings_count > 0"
+    priority: 2
+
+  - source: requirement_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "requirement_agent.findings_count > 0"
+    priority: 2
+
+  # Self-loop: validator re-runs itself (bounded to 1 retry) on findings whose
+  # decision could not be resolved on the first pass.
+  - source: validator_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "validator_agent.uncertain_count > 0"
+    priority: 3
+
+  - source: validator_agent
+    target: critic_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 3
+
+  # Dynamic agent activation (spec: orchestrator spawning an agent mid-run
+  # based on a discovery, not a pre-planned static path): CI Investigator is
+  # NOT part of the up-front fan-out above - it only runs if the engine
+  # observes a HIGH/CRITICAL-severity CONFIRMED finding from the wave-1
+  # agents and emits HIGH_SEVERITY_FINDING_CONFIRMED. This is the one real
+  # EVENT-type edge in the graph (see backend/core/conditions/condition_types.py:_event).
+  - source: validator_agent
+    target: ci_investigator_agent
+    type: EVENT
+    condition: "HIGH_SEVERITY_FINDING_CONFIRMED"
+    priority: 3
+
+  - source: critic_agent
+    target: validator_agent
+    type: AGENT_RESULT
+    condition: "critic_agent.weak_evidence_count > 0"
+    priority: 4
+
+  - source: critic_agent
+    target: conflict_resolver_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 4
+
+  - source: conflict_resolver_agent
+    target: debate_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 4
+
+  # Multi-agent debate (spec: LLM-mediated back-and-forth when agents
+  # disagree): runs after Conflict Resolver's deterministic clustering,
+  # before Final Review. Only calls the LLM for clusters Conflict Resolver
+  # actually flagged as a genuine severity conflict (see backend/backend/
+  # agents/debate/debate_agent.py) - an empty conflict list is a fully
+  # avoided LLM call, not a skipped feature.
+  - source: debate_agent
+    target: final_review_agent
+    type: ALWAYS
+    condition: "True"
+    priority: 4
+
+  - source: final_review_agent
+    target: human_approval
+    type: ALWAYS
+    condition: "True"
+    priority: 5
+
+  - source: human_approval
+    target: github_publish
+    type: IF
+    condition: "human_approval.decision == 'APPROVE'"
+    priority: 6
+
+  # The one real ELSE-type edge in the graph: fires whenever its sibling IF
+  # edge above (same source_agent) evaluated false, i.e. REJECT or EDIT.
+  - source: human_approval
+    target: review_closed
+    type: ELSE
+    condition: "else (not APPROVE)"
+    priority: 6

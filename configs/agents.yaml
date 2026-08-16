@@ -1,0 +1,188 @@
+agents:
+  impact_analyzer:
+    enabled: true
+    execution: sequential
+    llm: false
+
+  security_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 6000
+    max_output_tokens: 2000
+    timeout_s: 30
+
+  bug_detection_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 6000
+    max_output_tokens: 2000
+    timeout_s: 30
+
+  test_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  performance_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  documentation_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  dependency_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+    # conditionally activated: only runs when impact_analyzer flags
+    # dependency_changed=True (see configs/graph.yaml)
+
+  reliability_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  api_contract_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  database_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+    # conditionally activated: only runs when impact_analyzer flags
+    # database_changed=True (see configs/graph.yaml)
+
+  observability_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  architecture_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  code_impact_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  static_analysis_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  accessibility_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+    # conditionally activated: only runs when impact_analyzer flags
+    # frontend_changed=True (see configs/graph.yaml)
+
+  ci_investigator_agent:
+    enabled: true
+    execution: dynamic
+    llm: true
+    max_input_tokens: 4000
+    max_output_tokens: 1000
+    timeout_s: 30
+    # uses the GitHub Actions REST API via the existing GitHub client/token -
+    # no separate CI integration needed (see backend/backend/tools/ci).
+    # Dynamically activated (not part of the up-front wave): only runs if a
+    # wave-1 agent's finding is CONFIRMED at HIGH/CRITICAL severity (see the
+    # EVENT-type edge validator_agent -> ci_investigator_agent in configs/graph.yaml)
+
+  requirement_agent:
+    enabled: true
+    execution: parallel
+    llm: true
+    max_input_tokens: 4000
+    max_output_tokens: 1000
+    timeout_s: 30
+    # Jira integration: real if JIRA_BASE_URL+JIRA_API_TOKEN set, else mock
+    # against tests/fixtures/demo_pr/jira_issue.json (see backend/backend/integrations/jira)
+
+  validator_agent:
+    enabled: true
+    execution: sequential
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  critic_agent:
+    enabled: true
+    execution: sequential
+    llm: true
+    max_input_tokens: 5000
+    max_output_tokens: 1500
+    timeout_s: 30
+
+  conflict_resolver_agent:
+    enabled: true
+    execution: sequential
+    llm: false
+    # deterministic-only: cross-references overlapping findings, never
+    # calls the LLM (see backend/backend/agents/conflict_resolver)
+
+  debate_agent:
+    enabled: true
+    execution: sequential
+    llm: true
+    max_input_tokens: 4000
+    max_output_tokens: 800
+    timeout_s: 30
+    # LLM-mediated arbitration, but only for clusters Conflict Resolver
+    # actually flagged as a genuine severity conflict - zero conflicts this
+    # run means zero LLM calls (see backend/backend/agents/debate)
+
+  final_review_agent:
+    enabled: true
+    execution: sequential
+    llm: true
+    max_input_tokens: 6000
+    max_output_tokens: 2000
+    timeout_s: 30

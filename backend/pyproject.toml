@@ -1,0 +1,55 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Live Multi-Agent PR Reviewer - backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "httpx>=0.27.0",
+    "tenacity>=9.0.0",
+    "unidiff>=0.7.5",
+    "groq>=0.11.0",
+    "tiktoken>=0.8.0",
+    "GitPython>=3.1.43",
+    "PyYAML>=6.0.2",
+    "python-dotenv>=1.0.1",
+    "sqlmodel>=0.0.22",
+    "aiosqlite>=0.20.0",
+    "ruff>=0.7.0",
+    "pylint>=3.3.0",
+    "networkx>=3.4.0",
+    "websockets>=13.1",
+    "pytest>=8.3.0",
+    "pytest-json-report>=1.5.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.optional-dependencies]
+# Optional tracing SDKs (spec: Langfuse/LangSmith). Import-guarded in
+# backend/integrations/tracing/ - absent here, the app falls back to
+# NoOpTracingClient rather than failing, same graceful-degradation shape
+# ruff/semgrep/pylint use for a missing binary.
+tracing = ["langfuse>=2.50.0", "langsmith>=0.1.130"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["../tests/backend"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection pattern is `param: T = Depends(...)` - a call
+# in a default argument is the intended API, not the mutable-default footgun
+# B008 exists for.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query"]
