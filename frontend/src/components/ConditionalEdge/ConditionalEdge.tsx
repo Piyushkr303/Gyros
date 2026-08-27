@@ -11,14 +11,17 @@ export interface ConditionalEdgeData {
    * paths so their labels don't render on top of one another. */
   parallelIndex?: number;
   parallelCount?: number;
+  /** Set when this edge sits on a branch no live path reaches (yet) - fades
+   * it out of the way of whatever path is actually executing. */
+  dimmed?: boolean;
 }
 
-const STATE_STYLE: Record<EdgeVisualState, { stroke: string; strokeWidth: number; dash?: string; animated: boolean }> = {
-  idle: { stroke: "#1c2333", strokeWidth: 1.5, dash: "4 4", animated: false },
-  active: { stroke: "#818cf8", strokeWidth: 3, animated: true },
-  passed: { stroke: "#4ade80", strokeWidth: 3, animated: false },
-  failed: { stroke: "#f87171", strokeWidth: 1.5, dash: "2 4", animated: false },
-  skipped: { stroke: "#334155", strokeWidth: 1, dash: "2 6", animated: false },
+const STATE_STYLE: Record<EdgeVisualState, { stroke: string; strokeWidth: number; dash?: string }> = {
+  idle: { stroke: "#1c2333", strokeWidth: 1.5, dash: "4 4" },
+  active: { stroke: "#818cf8", strokeWidth: 3 },
+  passed: { stroke: "#4ade80", strokeWidth: 3 },
+  failed: { stroke: "#f87171", strokeWidth: 1.5, dash: "2 4" },
+  skipped: { stroke: "#334155", strokeWidth: 1, dash: "2 6" },
 };
 
 const PARALLEL_EDGE_SPACING = 64;
@@ -68,6 +71,7 @@ export function ConditionalEdgeComponent({
   const state = data?.state ?? "idle";
   const style = STATE_STYLE[state];
   const isConditional = data?.conditionType && data.conditionType !== "ALWAYS";
+  const opacity = data?.dimmed ? 0.3 : 1;
 
   return (
     <>
@@ -79,16 +83,31 @@ export function ConditionalEdgeComponent({
           strokeWidth: style.strokeWidth,
           strokeDasharray: style.dash,
           strokeLinecap: "round",
-          transition: "stroke 0.3s ease, stroke-width 0.3s ease, d 0.3s ease",
+          opacity,
+          transition: "stroke 0.3s ease, stroke-width 0.3s ease, d 0.3s ease, opacity 0.4s ease",
         }}
       />
+      {/* A pair of dots travels the path while data is actually flowing through this
+          edge, staggered half a cycle apart for a continuous "in transit" read rather
+          than the generic marching-ants dash pattern. */}
+      {state === "active" && !data?.dimmed && (
+        <>
+          <circle r="3.5" fill={style.stroke}>
+            <animateMotion dur="1.6s" repeatCount="indefinite" path={edgePath} />
+          </circle>
+          <circle r="3.5" fill={style.stroke} opacity={0.6}>
+            <animateMotion dur="1.6s" begin="-0.8s" repeatCount="indefinite" path={edgePath} />
+          </circle>
+        </>
+      )}
       {isConditional && (
         <EdgeLabelRenderer>
           <div
             style={{
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-              transition: "transform 0.3s ease",
+              transition: "transform 0.3s ease, opacity 0.4s ease",
+              opacity,
             }}
             className={`pointer-events-none rounded-md border px-1.5 py-0.5 font-display text-[9px] shadow-sm backdrop-blur-sm ${
               state === "passed"
