@@ -42,12 +42,17 @@ const FOCUS_ZOOM = 1.15;
 // rather than "the UI is glitching" - mock-mode agents can finish in well
 // under a second, so speed has to come from the camera's own pacing, not
 // from how fast the underlying events fire.
-const FOCUS_DURATION_MS = 1100;
-// Minimum time the camera stays on one node before it's allowed to move to
-// the next, regardless of how fast agents actually transition. Without this,
-// a burst of quick agent completions (common in mock mode) makes the camera
-// whip across the graph faster than a viewer can follow.
-const MIN_DWELL_MS = 1600;
+const FOCUS_DURATION_MS = 850;
+// Fixed time the camera spends on each stop of its tour before advancing to
+// the next one. Deliberately NOT tied to how fast events actually arrive -
+// a full demo-mode review can finish all ~20 agents in under two seconds,
+// which is faster than any "wait for the next real event" scheme could ever
+// look smooth at. Walking a fixed queue at a fixed pace instead means the
+// camera always takes a full, readable tour of every agent that ran, however
+// fast the backend actually finished - and for a slow/real run, it simply
+// waits at POLL_MS granularity for the next agent to start.
+const TOUR_STEP_MS = 1300;
+const TOUR_POLL_MS = 400;
 const ELAPSED_TICK_MS = 300;
 
 // Statuses that mean "this agent is actively doing work right now" - kept in
@@ -82,23 +87,21 @@ function layout(nodeIds: string[], edgePairs: Array<[string, string]>, size: typ
   return positions;
 }
 
-/** Walks the event log newest-first to find the agent that most recently
- * became active and is still in a processing state - this is "the node
- * currently being worked on" that the camera should follow. Falling back to
- * event order (rather than just scanning `agents`) means that when several
- * agents are active at once, focus follows whichever one moved last instead
- * of jumping unpredictably based on object key order. */
-function findActiveAgentId(events: ReviewEvent[], agents: Record<string, AgentNodeState>): string | null {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const agentId = events[i]?.payload?.agent;
-    if (typeof agentId !== "string") continue;
-    const status = agents[agentId]?.status;
-    if (status && PROCESSING_STATUSES.has(status)) return agentId;
+/** Every agent id in the order its AGENT_STARTED event first appeared - the
+ * camera's tour stops, in visitation order. Built from the event log rather
+ * than the `agents` map so the order is the true execution order (including
+ * every agent in a parallel fan-out) instead of object-key order. */
+function buildTourQueue(events: ReviewEvent[]): string[] {
+  const seen = new Set<string>();
+  const order: string[] = [];
+  for (const event of events) {
+    const agentId = event.payload?.agent;
+    if (event.type === "AGENT_STARTED" && typeof agentId === "string" && !seen.has(agentId)) {
+      seen.add(agentId);
+      order.push(agentId);
+    }
   }
-  // Fallback: no event pointed at a live agent, but one may still be
-  // active (e.g. right after a replay seek) - just take the first match.
-  const fallback = Object.values(agents).find((a) => PROCESSING_STATUSES.has(a.status));
-  return fallback ? fallback.id : null;
+  return order;
 }
 
 /** Walks the event log chronologically to find, for every agent currently in
@@ -254,64 +257,67 @@ function AgentGraphCanvas({ onSelectAgent, onSelectEdge, hooks = liveStoreHooks 
     };
   });
 
-  const activeAgentId = findActiveAgentId(events, agents);
-  const didInitialFit = useRef(false);
-  const lastFocusedId = useRef<string | null>(null);
-  const lastFocusAt = useRef(0);
-  const pendingFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestActiveIdRef = useRef(activeAgentId);
-  latestActiveIdRef.current = activeAgentId;
+  const tourQueue = useMemo(() => buildTourQueue(events), [events]);
+
+  // Everything the self-scheduling tour loop below needs to read is kept in
+  // refs and updated every render, so the loop itself can run once (empty
+  // dep array) instead of being torn down and restarted on every event -
+  // that's what lets it keep its own steady pace independent of how often
+  // the underlying store actually updates.
+  const tourIndexRef = useRef(-1);
+  const tourQueueRef = useRef(tourQueue);
+  tourQueueRef.current = tourQueue;
+  const autoFollowRef = useRef(autoFollow);
+  autoFollowRef.current = autoFollow;
+  const positionsRef = useRef(positions);
+  positionsRef.current = positions;
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
+  const setCenterRef = useRef(setCenter);
+  setCenterRef.current = setCenter;
 
   useEffect(() => {
-    if (!didInitialFit.current) {
-      // Let the very first render settle with the whole graph in view.
-      didInitialFit.current = true;
-      return;
-    }
-    if (!autoFollow || !activeAgentId || activeAgentId === lastFocusedId.current) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
 
-    const focus = (id: string) => {
-      const pos = positions[id];
-      if (!pos) return;
-      lastFocusedId.current = id;
-      lastFocusAt.current = Date.now();
-      setCenter(pos.x + size.width / 2, pos.y + size.height / 2, {
-        zoom: FOCUS_ZOOM,
-        duration: FOCUS_DURATION_MS,
-      });
+    const tick = () => {
+      if (cancelled) return;
+      if (!autoFollowRef.current) {
+        timer = setTimeout(tick, TOUR_POLL_MS);
+        return;
+      }
+      const queue = tourQueueRef.current;
+      const nextIndex = tourIndexRef.current + 1;
+      if (nextIndex < queue.length) {
+        tourIndexRef.current = nextIndex;
+        const pos = positionsRef.current[queue[nextIndex]];
+        if (pos) {
+          const { width, height } = sizeRef.current;
+          setCenterRef.current(pos.x + width / 2, pos.y + height / 2, {
+            zoom: FOCUS_ZOOM,
+            duration: FOCUS_DURATION_MS,
+          });
+        }
+        timer = setTimeout(tick, TOUR_STEP_MS);
+      } else {
+        // Nothing new to visit yet - keep polling at a tighter interval so a
+        // real (slower) run's next agent gets picked up promptly once it starts.
+        timer = setTimeout(tick, TOUR_POLL_MS);
+      }
     };
 
-    const elapsedSinceLastFocus = Date.now() - lastFocusAt.current;
-    if (elapsedSinceLastFocus >= MIN_DWELL_MS) {
-      focus(activeAgentId);
-    } else if (!pendingFocusTimer.current) {
-      // Already showing a node the viewer hasn't had time to register yet -
-      // wait out the remainder of its dwell time, then jump to whichever
-      // agent is active *then* (not necessarily this one).
-      pendingFocusTimer.current = setTimeout(() => {
-        pendingFocusTimer.current = null;
-        if (latestActiveIdRef.current && latestActiveIdRef.current !== lastFocusedId.current) {
-          focus(latestActiveIdRef.current);
-        }
-      }, MIN_DWELL_MS - elapsedSinceLastFocus);
-    }
-  }, [activeAgentId, autoFollow, positions, setCenter, size.width, size.height]);
+    // Small initial delay so the whole-graph fitView is visible for a beat
+    // before the tour starts zooming in on the first agent.
+    timer = setTimeout(tick, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    lastFocusedId.current = null;
-    lastFocusAt.current = 0;
-    if (pendingFocusTimer.current) {
-      clearTimeout(pendingFocusTimer.current);
-      pendingFocusTimer.current = null;
-    }
+    tourIndexRef.current = -1;
   }, [nodeIds]);
-
-  useEffect(
-    () => () => {
-      if (pendingFocusTimer.current) clearTimeout(pendingFocusTimer.current);
-    },
-    []
-  );
 
   return (
     <ReactFlow
